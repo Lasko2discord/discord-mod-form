@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulaire de Modération Discord</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #36393f;
+            color: #ffffff;
+        }
+        .question {
+            display: none;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #2f3136;
+            border-radius: 5px;
+        }
+        .question.active {
+            display: block;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #40444b;
+            border: 1px solid #202225;
+            color: white;
+            border-radius: 3px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #7289da;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #677bc4;
+        }
+        #adminSection {
+            display: none;
+            margin-top: 20px;
+        }
+        .response-container {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #2f3136;
+            border-radius: 5px;
+        }
+        .response-container.reviewed {
+            border-left: 4px solid #43b581;
+        }
+        .admin-tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .admin-tab {
+            padding: 10px 20px;
+            background-color: #40444b;
+            cursor: pointer;
+            border: none;
+            color: white;
+        }
+        .admin-tab.active {
+            background-color: #7289da;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .reviewer-info {
+            font-size: 0.9em;
+            color: #99aab5;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="userForm">
+        <div id="usernameSection" class="question active">
+            <h2>Formulaire de Candidature Modérateur</h2>
+            <label for="discordUsername">Votre pseudo Discord:</label>
+            <input type="text" id="discordUsername" required>
+            <button onclick="startForm()">Commencer</button>
+        </div>
+
+        <div id="q1" class="question">
+            <h3>As-tu déjà été staff dans un serveur Discord ?</h3>
+            <button onclick="handleQ1('oui')">Oui</button>
+            <button onclick="handleQ1('non')">Non</button>
+            <div id="staffExperience" style="display: none;">
+                <input type="text" id="staffExperienceDetail" placeholder="Décris ton expérience...">
+                <button onclick="nextQuestion(2)">Suivant</button>
+            </div>
+        </div>
+
+        <div id="q2" class="question">
+            <h3>Es-tu actif sur Discord ?</h3>
+            <button onclick="nextQuestion(3)">Oui</button>
+            <button onclick="nextQuestion(3)">Non</button>
+        </div>
+
+        <div id="q3" class="question">
+            <h3>Combien de temps passes-tu sur Discord par semaine ?</h3>
+            <input type="text" id="discordTime" placeholder="Ton temps par semaine...">
+            <button onclick="nextQuestion(4)">Suivant</button>
+        </div>
+
+        <div id="q4" class="question">
+            <h3>Es-tu déterminé(e) ?</h3>
+            <button onclick="nextQuestion(5)">Oui</button>
+            <button onclick="nextQuestion(5)">Non</button>
+        </div>
+
+        <div id="q5" class="question">
+            <h3>Pourquoi toi et pas un autre ?</h3>
+            <textarea id="whyYou" rows="4"></textarea>
+            <button onclick="submitForm()">Soumettre</button>
+        </div>
+    </div>
+
+    <div id="adminLogin">
+        <button onclick="showAdminLogin()">Admin Login</button>
+        <div id="adminLoginForm" style="display: none;">
+            <input type="password" id="adminPassword" placeholder="Mot de passe admin">
+            <button onclick="loginAdmin()">Connexion</button>
+        </div>
+    </div>
+
+    <div id="adminSection">
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="showTab('pending')">Candidatures en attente</button>
+            <button class="admin-tab" onclick="showTab('reviewed')">Candidatures traitées</button>
+        </div>
+        <div id="pendingSubmissions"></div>
+        <div id="reviewedSubmissions" style="display: none;"></div>
+    </div>
+
+    <script>
+        let currentResponses = {
+            username: '',
+            staffExperience: '',
+            isActive: '',
+            timeSpent: '',
+            isDetermined: '',
+            whyYou: '',
+            submissionDate: '',
+            reviewed: false,
+            reviewedBy: '',
+            reviewDate: ''
+        };
+
+        const ADMIN_PASSWORD = "admin123";
+        let submissions = [];
+        let currentAdmin = '';
+
+        function startForm() {
+            const username = document.getElementById('discordUsername').value;
+            if (username.trim() === '') {
+                alert('Veuillez entrer votre pseudo Discord');
+                return;
+            }
+            currentResponses.username = username;
+            nextQuestion(1);
+        }
+
+        function handleQ1(answer) {
+            if (answer === 'oui') {
+                document.getElementById('staffExperience').style.display = 'block';
+            } else {
+                currentResponses.staffExperience = 'Non';
+                nextQuestion(2);
+            }
+        }
+
+        function nextQuestion(questionNumber) {
+            document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
+            document.getElementById(`q${questionNumber}`).classList.add('active');
+        }
+
+        function submitForm() {
+            currentResponses.whyYou = document.getElementById('whyYou').value;
+            currentResponses.submissionDate = new Date().toISOString();
+            submissions.push({...currentResponses});
+            alert('Formulaire soumis avec succès !');
+            resetForm();
+        }
+
+        function resetForm() {
+            document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
+            document.getElementById('usernameSection').classList.add('active');
+            currentResponses = {
+                username: '',
+                staffExperience: '',
+                isActive: '',
+                timeSpent: '',
+                isDetermined: '',
+                whyYou: '',
+                submissionDate: '',
+                reviewed: false,
+                reviewedBy: '',
+                reviewDate: ''
+            };
+        }
+
+        function showAdminLogin() {
+            document.getElementById('adminLoginForm').style.display = 'block';
+        }
+
+        function loginAdmin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                currentAdmin = prompt("Entrez votre nom d'administrateur:");
+                if (currentAdmin) {
+                    showAdminPanel();
+                }
+            } else {
+                alert('Mot de passe incorrect');
+            }
+        }
+
+        function markAsReviewed(index) {
+            submissions[index].reviewed = true;
+            submissions[index].reviewedBy = currentAdmin;
+            submissions[index].reviewDate = new Date().toISOString();
+            showAdminPanel();
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            if (tab === 'pending') {
+                document.getElementById('pendingSubmissions').style.display = 'block';
+                document.getElementById('reviewedSubmissions').style.display = 'none';
+                document.querySelector('.admin-tab:first-child').classList.add('active');
+            } else {
+                document.getElementById('pendingSubmissions').style.display = 'none';
+                document.getElementById('reviewedSubmissions').style.display = 'block';
+                document.querySelector('.admin-tab:last-child').classList.add('active');
+            }
+        }
+
+        function showAdminPanel() {
+            const adminSection = document.getElementById('adminSection');
+            const pendingSection = document.getElementById('pendingSubmissions');
+            const reviewedSection = document.getElementById('reviewedSubmissions');
+            
+            adminSection.style.display = 'block';
+            pendingSection.innerHTML = '<h2>Candidatures en attente</h2>';
+            reviewedSection.innerHTML = '<h2>Candidatures traitées</h2>';
+            
+            submissions.forEach((submission, index) => {
+                const submissionHtml = `
+                    <div class="response-container ${submission.reviewed ? 'reviewed' : ''}">
+                        <h3>Candidature de ${submission.username}</h3>
+                        <p>Date de soumission: ${new Date(submission.submissionDate).toLocaleString()}</p>
+                        <p>Expérience staff: ${submission.staffExperience}</p>
+                        <p>Actif sur Discord: ${submission.isActive}</p>
+                        <p>Temps hebdomadaire: ${submission.timeSpent}</p>
+                        <p>Déterminé: ${submission.isDetermined}</p>
+                        <p>Pourquoi lui/elle: ${submission.whyYou}</p>
+                        ${submission.reviewed ? 
+                            `<div class="reviewer-info">
+                                Traité par ${submission.reviewedBy} le ${new Date(submission.reviewDate).toLocaleString()}
+                            </div>` :
+                            `<div class="checkbox-container">
+                                <input type="checkbox" id="reviewed-${index}" onchange="markAsReviewed(${index})">
+                                <label for="reviewed-${index}">Marquer comme traité</label>
+                            </div>`
+                        }
+                    </div>
+                `;
+                
+                if (submission.reviewed) {
+                    reviewedSection.innerHTML += submissionHtml;
+                } else {
+                    pendingSection.innerHTML += submissionHtml;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
